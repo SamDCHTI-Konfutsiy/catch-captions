@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subtitle Studio Pro</title>
+<meta name="description" content="Professional offline subtitle editor — video, timeline, waveform, quality checks. Everything stays on your device.">
+<meta name="theme-color" content="#0d0f12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= Topbar ================= -->
+  <header id="topbar">
+    <div id="logo"><span class="mark">SS</span><span data-i18n="app_title">Subtitle Studio Pro</span></div>
+    <input id="projectName" aria-label="Project name" value="Untitled project">
+    <button id="btnProjects" class="btn icon" data-i18n-title="projects" title="Projects">
+      <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    </button>
+    <span class="tb-sep" aria-hidden="true"></span>
+    <div class="tb-group">
+      <button id="btnOpenVideo" class="btn"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><polygon points="10,9 16,12 10,15"/></svg><span data-i18n="open_video">Open video</span></button>
+      <button id="btnOpenSubs" class="btn"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="14" x2="13" y2="14"/><line x1="7" y1="17" x2="17" y2="17"/></svg><span data-i18n="open_subs">Open subtitles</span></button>
+      <button id="btnNewSubs" class="btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span data-i18n="new_subs">New subtitles</span></button>
+    </div>
+    <span class="tb-spacer"></span>
+    <span id="statusLine" class="muted mono" role="status" aria-live="polite"></span>
+    <div class="tb-group">
+      <button id="btnSave" class="btn" data-i18n-title="save" title="Save"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><rect x="8" y="3" width="7" height="5"/><rect x="8" y="13" width="8" height="8"/></svg><span data-i18n="save">Save</span></button>
+      <button id="btnSearch" class="btn icon" data-i18n-title="search" title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></button>
+      <button id="btnQC" class="btn icon" data-i18n-title="qc" title="Quality check"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></button>
+      <button id="btnHanzi" class="btn icon" data-i18n-title="hanzi" title="简体/繁体"><span class="mono" style="font-size:13px;font-weight:600">简/繁</span></button>
+      <button id="btnSync" class="btn icon" data-i18n-title="sync" title="Sync timing"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,14"/></svg></button>
+      <button id="btnAsr" class="btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg><span data-i18n="asr">Auto subs</span></button>
+      <button id="btnExport" class="btn primary"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg><span data-i18n="export">Export</span></button>
+      <span class="tb-sep" aria-hidden="true"></span>
+      <button id="btnTheme" class="btn icon" data-i18n-title="theme" title="Theme"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></button>
+      <button id="btnSettings" class="btn icon" data-i18n-title="settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg></button>
+    </div>
+  </header>
+
+  <!-- ================= Workspace ================= -->
+  <main id="workspace">
+    <section id="videoPane" aria-label="Video">
+      <div id="videoStage">
+        <video id="video" playsinline preload="metadata"></video>
+        <div id="subOverlay" aria-hidden="true"><span id="subOverlayText"></span></div>
+        <div id="dropHint">
+          <div>
+            <h2 data-i18n="drop_title">Drop a video here</h2>
+            <p class="muted" data-i18n="drop_sub">or open a file, paste a video URL, or start with subtitles only</p>
+            <div class="row">
+              <button id="btnOpenVideo2" class="btn primary" data-i18n="browse">Browse…</button>
+              <button id="btnOpenUrl" class="btn outline" data-i18n="open_url">Open URL…</button>
+            </div>
+            <p id="recentTitle" class="muted hidden" style="margin:14px 0 6px" data-i18n="recent">Recent files</p>
+            <div id="recentList" class="row hidden"></div>
+          </div>
+        </div>
+      </div>
+      <div id="transport" role="toolbar" aria-label="Playback controls">
+        <div id="seekbarWrap"><input id="seekbar" type="range" min="0" max="1000" value="0" aria-label="Seek"></div>
+        <span id="timecode" aria-live="off">00:00:00.000 <span class="dur">/ 00:00:00.000</span></span>
+        <button id="btnBack30" class="btn icon" title="−30s" aria-label="Back 30 seconds"><span class="mono">−30</span></button>
+        <button id="btnBack10" class="btn icon" title="−10s" aria-label="Back 10 seconds"><span class="mono">−10</span></button>
+        <button id="btnBack5" class="btn icon" title="−5s" aria-label="Back 5 seconds"><span class="mono">−5</span></button>
+        <button id="btnFrameBack" class="btn icon" data-i18n-title="frame_back" title="Frame back"><svg viewBox="0 0 24 24"><polygon points="17,5 8,12 17,19"/><line x1="6" y1="5" x2="6" y2="19"/></svg></button>
+        <button id="btnPlay" class="btn icon primary" data-i18n-title="play" title="Play/Pause"><svg viewBox="0 0 24 24"><polygon points="7,4 20,12 7,20"/></svg></button>
+        <button id="btnFrameFwd" class="btn icon" data-i18n-title="frame_fwd" title="Frame forward"><svg viewBox="0 0 24 24"><polygon points="7,5 16,12 7,19"/><line x1="18" y1="5" x2="18" y2="19"/></svg></button>
+        <button id="btnFwd5" class="btn icon" title="+5s" aria-label="Forward 5 seconds"><span class="mono">+5</span></button>
+        <button id="btnFwd10" class="btn icon" title="+10s" aria-label="Forward 10 seconds"><span class="mono">+10</span></button>
+        <button id="btnFwd30" class="btn icon" title="+30s" aria-label="Forward 30 seconds"><span class="mono">+30</span></button>
+        <select id="speedSel" data-i18n-title="speed" title="Playback speed" aria-label="Playback speed">
+          <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+        </select>
+        <button id="btnLoop" class="btn icon" data-i18n-title="loop_sel" title="Loop selected"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        <button id="btnShot" class="btn icon" data-i18n-title="screenshot" title="Screenshot"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M9 7l1.5-3h3L15 7"/></svg></button>
+        <button id="btnMute" class="btn icon" data-i18n-title="mute" title="Mute"><svg viewBox="0 0 24 24"><polygon points="4,9 8,9 13,4 13,20 8,15 4,15"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></button>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+        <button id="btnFullscreen" class="btn icon" data-i18n-title="fullscreen" title="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/></svg></button>
+      </div>
+    </section>
+
+    <div id="vSplit" class="v-split" role="separator" aria-orientation="vertical" aria-label="Resize panels" tabindex="-1"></div>
+
+    <section id="sidePane" aria-label="Subtitle editor">
+      <div id="editor">
+        <div class="panel-title"><span data-i18n="editor">Editor</span><span id="edNum" class="mono">—</span><span class="flex"></span></div>
+        <div id="captureStrip">
+          <span class="stateDot" aria-hidden="true"></span>
+          <span id="capMsg" class="grow">Press [ to mark start, ] to mark end</span>
+          <span id="capTc" class="cap-tc"></span>
+          <button id="btnMarkStart" class="btn outline" data-i18n="set_start">Set start [</button>
+          <button id="btnMarkEnd" class="btn outline" data-i18n="set_end">Set end ]</button>
+        </div>
+        <div class="ed-times">
+          <div class="field"><label for="edStart" data-i18n="start">Start</label><input id="edStart" class="tc-input" placeholder="00:00:00.000" disabled></div>
+          <div class="field"><label for="edEnd" data-i18n="end">End</label><input id="edEnd" class="tc-input" placeholder="00:00:00.000" disabled></div>
+          <div class="field"><label for="edDur" data-i18n="duration">Duration</label><input id="edDur" class="tc-input" disabled readonly></div>
+        </div>
+        <div class="field">
+          <label for="edText" data-i18n="text">Subtitle text</label>
+          <textarea id="edText" disabled placeholder="…"></textarea>
+        </div>
+        <div class="ed-meta">
+          <span><span id="mChars">0</span> <span data-i18n="chars">chars</span></span>
+          <span><span id="mLines">0</span> <span data-i18n="lines">lines</span></span>
+          <span><span id="mCps">0.0</span> <span data-i18n="cps">CPS</span></span>
+        </div>
+        <div class="ed-actions">
+          <button id="btnAddSub" class="btn primary" data-i18n="add_sub">Add subtitle</button>
+          <button id="btnDelSub" class="btn danger" disabled data-i18n="delete_sub">Delete</button>
+          <button id="btnSplit" class="btn outline" disabled data-i18n="split">Split at playhead</button>
+          <button id="btnMerge" class="btn outline" disabled data-i18n="merge">Merge with next</button>
+          <button id="btnDup" class="btn outline" disabled data-i18n="duplicate">Duplicate</button>
+        </div>
+      </div>
+      <div id="listPane">
+        <div class="panel-title" style="padding:8px 12px 0"><span data-i18n="list">Subtitles</span><span id="listCount" class="mono muted"></span></div>
+        <div id="listHeader" aria-hidden="true"><span>#</span><span data-i18n="start">Start</span><span data-i18n="end">End</span><span data-i18n="text">Text</span><span data-i18n="cps">CPS</span></div>
+        <div id="subListScroll" role="list" aria-label="Subtitle list" tabindex="0">
+          <p id="emptyListMsg" class="muted" style="padding:20px" data-i18n="no_subs">No subtitles yet.</p>
+          <div id="subListSizer"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= Timeline ================= -->
+  <div id="hSplit" class="h-split" role="separator" aria-orientation="horizontal" aria-label="Resize timeline" tabindex="-1"></div>
+  <section id="timelinePane" aria-label="Timeline">
+    <div id="tlToolbar" role="toolbar" aria-label="Timeline controls">
+      <span class="panel-title" data-i18n="timeline">Timeline</span>
+      <span class="grow"></span>
+      <button id="btnFollow" class="btn outline" data-i18n="follow">Follow playhead</button>
+      <button id="btnFit" class="btn outline" data-i18n="fit">Fit</button>
+      <button id="btnZoomOut" class="btn icon" data-i18n-title="zoom_out" title="Zoom out"><span class="mono">−</span></button>
+      <span id="zoomLbl" class="zoomLbl">80 px/s</span>
+      <button id="btnZoomIn" class="btn icon" data-i18n-title="zoom_in" title="Zoom in"><span class="mono">+</span></button>
+    </div>
+    <div id="tlCanvasWrap"><canvas id="tlCanvas" aria-label="Subtitle timeline"></canvas></div>
+  </section>
+</div>
+
+<!-- ================= Modals ================= -->
+<div id="searchModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
+    <h2 id="searchTitle"><span data-i18n="search">Search</span><button id="searchClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <div class="row"><input id="sFind" type="text" data-i18n-ph="find" placeholder="Find"><input id="sReplace" type="text" data-i18n-ph="replace" placeholder="Replace"></div>
+    <div class="row">
+      <label class="check"><input id="sCase" type="checkbox"><span data-i18n="match_case">Match case</span></label>
+      <label class="check"><input id="sRegex" type="checkbox"><span data-i18n="regex">Regex</span></label>
+      <label class="check"><input id="sDup" type="checkbox"><span data-i18n="filter_dup">Duplicates</span></label>
+      <label class="check"><input id="sEmpty" type="checkbox"><span data-i18n="filter_empty">Empty</span></label>
+      <label class="check"><input id="sLong" type="checkbox"><span data-i18n="filter_long">Too long</span></label>
+    </div>
+    <div class="row">
+      <button id="btnReplaceOne" class="btn outline" data-i18n="replace">Replace</button>
+      <button id="btnReplaceAll" class="btn primary" data-i18n="replace_all">Replace all</button>
+      <span id="sCount" class="muted mono"></span>
+    </div>
+    <div id="sResults" class="list" role="list"></div>
+  </div>
+</div>
+
+<div id="qcModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="qcTitle">
+    <h2 id="qcTitle"><span data-i18n="qc_report">Quality report</span><button id="qcClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <p id="qcSummary" class="hint"></p>
+    <div id="qcResults" class="list" role="list"></div>
+  </div>
+</div>
+
+<div id="hanziModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hanziTitle">
+    <h2 id="hanziTitle"><span data-i18n="hanzi_title">简体 / 繁体</span><button id="hanziClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <p class="hint" data-i18n="hanzi_note"></p>
+    <p id="hanziStats" class="hint mono"></p>
+    <p id="hanziMixedNote" class="hint hidden" data-i18n="hanzi_mixed_warn"></p>
+    <div class="row">
+      <button id="btnHanziToSimp" class="btn outline" data-i18n="hanzi_to_simp">全部转为简体</button>
+      <button id="btnHanziToTrad" class="btn outline" data-i18n="hanzi_to_trad">全部轉為繁體</button>
+    </div>
+  </div>
+</div>
+
+<div id="syncModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="syncTitle">
+    <h2 id="syncTitle"><span data-i18n="sync_title">Vaqtni moslash</span><button id="syncClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <p class="hint" data-i18n="sync_note"></p>
+
+    <label class="check" style="margin-top:6px">
+      <input id="syncRangeOn" type="checkbox">
+      <span data-i18n="sync_range_toggle">Faqat tanlangan oraliqqa qo'llash (qolgan qism o'zgarmaydi)</span>
+    </label>
+    <div id="syncRangeFields" class="hidden" style="margin:8px 0;padding:10px;border:1px solid var(--line);border-radius:8px">
+      <p class="hint" data-i18n="sync_range_hint"></p>
+      <div class="row" style="align-items:flex-end">
+        <div class="field grow">
+          <label data-i18n="sync_range_start">Oraliq boshi</label>
+          <p id="syncRStartInfo" class="hint mono" style="margin:2px 0"></p>
+        </div>
+        <button id="btnSyncRangeStart" class="btn outline" data-i18n="sync_capture">Tanlangan qatorni belgilash</button>
+      </div>
+      <div class="row" style="align-items:flex-end;margin-top:8px">
+        <div class="field grow">
+          <label data-i18n="sync_range_end">Oraliq oxiri</label>
+          <p id="syncREndInfo" class="hint mono" style="margin:2px 0"></p>
+        </div>
+        <button id="btnSyncRangeEnd" class="btn outline" data-i18n="sync_capture">Tanlangan qatorni belgilash</button>
+      </div>
+    </div>
+
+    <h2 style="margin-top:14px;font-size:14px"><span data-i18n="sync_shift_title">Oddiy siljitish</span></h2>
+    <p class="hint" data-i18n="sync_shift_hint"></p>
+    <div class="row">
+      <input id="syncShiftSec" type="number" step="0.1" placeholder="+2.5 yoki -1.2" style="max-width:160px">
+      <button id="btnSyncShiftApply" class="btn primary" data-i18n="sync_apply">Qo'llash</button>
+    </div>
+
+    <h2 style="margin-top:18px;font-size:14px"><span data-i18n="sync_stretch_title">Ikki nuqta bo'yicha cho'zish</span></h2>
+    <p class="hint" data-i18n="sync_stretch_hint"></p>
+
+    <div class="row" style="align-items:flex-end">
+      <div class="field grow">
+        <label data-i18n="sync_point1">1-nuqta</label>
+        <p id="syncP1Info" class="hint mono" style="margin:2px 0"></p>
+      </div>
+      <button id="btnSyncP1Capture" class="btn outline" data-i18n="sync_capture">Tanlangan qatorni belgilash</button>
+      <div class="field"><label data-i18n="sync_correct_time">To'g'ri vaqt</label><input id="syncP1New" class="tc-input" type="number" step="0.001" disabled></div>
+    </div>
+    <div class="row" style="align-items:flex-end;margin-top:8px">
+      <div class="field grow">
+        <label data-i18n="sync_point2">2-nuqta</label>
+        <p id="syncP2Info" class="hint mono" style="margin:2px 0"></p>
+      </div>
+      <button id="btnSyncP2Capture" class="btn outline" data-i18n="sync_capture">Tanlangan qatorni belgilash</button>
+      <div class="field"><label data-i18n="sync_correct_time">To'g'ri vaqt</label><input id="syncP2New" class="tc-input" type="number" step="0.001" disabled></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="btnSyncStretchApply" class="btn primary" disabled data-i18n="sync_apply">Qo'llash</button>
+    </div>
+  </div>
+</div>
+
+<div id="exportModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <h2 id="exportTitle"><span data-i18n="export_subs">Export subtitles</span><button id="exportClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <div class="row">
+      <button class="btn outline" data-fmt="srt">SRT</button>
+      <button class="btn outline" data-fmt="vtt">VTT</button>
+      <button class="btn outline" data-fmt="ass">ASS</button>
+      <button class="btn outline" data-fmt="ssa">SSA</button>
+      <button class="btn outline" data-fmt="sbv">SBV</button>
+      <button class="btn outline" data-fmt="txt">TXT</button>
+      <button class="btn outline" data-fmt="json">JSON</button>
+      <button class="btn outline" data-fmt="csv">CSV</button>
+    </div>
+    <h2 style="margin-top:18px"><span data-i18n="export_project">Export project backup</span></h2>
+    <div class="row">
+      <button id="btnBackup" class="btn primary" data-i18n="export_project">Export project backup</button>
+      <button id="btnRestore" class="btn outline" data-i18n="restore">Restore backup</button>
+    </div>
+  </div>
+</div>
+
+<div id="projModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="projTitle">
+    <h2 id="projTitle"><span data-i18n="projects">Projects</span><button id="projClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <div class="row"><button id="btnNewProject" class="btn primary" data-i18n="new_project">New project</button></div>
+    <div id="projList" class="list" role="list"></div>
+  </div>
+</div>
+
+<div id="urlModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="urlTitle">
+    <h2 id="urlTitle"><span data-i18n="url_title">Open video from URL</span><button id="urlClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <div class="row"><input id="urlInput" type="url" data-i18n-ph="url_placeholder" placeholder="https://example.com/video.mp4"></div>
+    <p id="ytNote" class="hint hidden" data-i18n="yt_detected"></p>
+    <p class="hint" data-i18n="url_hint"></p>
+    <div class="row">
+      <button id="btnUrlLoad" class="btn primary" data-i18n="load_anyway">Load URL</button>
+      <button id="btnUrlTab" class="btn outline" data-i18n="open_tab">Open in new tab</button>
+    </div>
+  </div>
+</div>
+
+<div id="asrModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="asrTitle">
+    <h2 id="asrTitle"><span data-i18n="asr_title">Automatic subtitles (Whisper)</span><button id="asrClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <p class="hint" data-i18n="asr_note"></p>
+    <p class="hint" data-i18n="asr_tip"></p>
+    <div class="row">
+      <label class="field grow"><span data-i18n="asr_model">Model</span>
+        <select id="asrModel">
+          <option value="tiny">Whisper Tiny — ~40 MB</option>
+          <option value="base" selected>Whisper Base — ~80 MB</option>
+          <option value="small">Whisper Small — ~250 MB</option>
+          <option value="custom" data-i18n="asr_custom">Custom (HuggingFace ONNX model ID)…</option>
+        </select>
+        <input id="asrCustomId" class="hidden" type="text" data-i18n-ph="asr_custom_ph" placeholder="user/whisper-finetune-ONNX" style="margin-top:6px"></label>
+      <label class="field grow"><span data-i18n="asr_lang">Language</span>
+        <select id="asrLang">
+          <option value="" data-i18n="asr_lang_auto">Auto-detect</option>
+          <option value="uzbek">Oʻzbekcha</option>
+          <option value="english">English</option>
+          <option value="russian">Русский</option>
+          <option value="chinese">中文</option>
+          <option value="spanish">Español</option>
+          <option value="french">Français</option>
+          <option value="german">Deutsch</option>
+          <option value="japanese">日本語</option>
+          <option value="korean">한국어</option>
+          <option value="turkish">Türkçe</option>
+          <option value="arabic">العربية</option>
+        </select></label>
+    </div>
+    <div class="progress-track"><div id="asrBarFill" class="progress-fill"></div></div>
+    <p id="asrStatus" class="hint" aria-live="polite"></p>
+    <p id="asrPreview"></p>
+    <div class="row">
+      <button id="btnAsrStart" class="btn primary" data-i18n="asr_start">Start transcription</button>
+      <button id="btnAsrCancel" class="btn outline" disabled data-i18n="asr_cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle"><span data-i18n="settings">Settings</span><button id="settingsClose" class="btn icon x" aria-label="Close">✕</button></h2>
+    <div class="row">
+      <label class="field grow"><span data-i18n="theme">Theme</span>
+        <select id="setTheme"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+      <label class="field grow"><span data-i18n="language">Language</span>
+        <select id="setLang"><option value="en">English</option><option value="zh">中文</option><option value="ru">Русский</option><option value="uz">Oʻzbekcha</option></select></label>
+      <label class="field grow"><span data-i18n="autosave_interval">Autosave interval (seconds)</span>
+        <input id="setAutosave" type="number" min="5" max="600" step="5"></label>
+    </div>
+    <div class="row"><label class="check"><input id="setContrast" type="checkbox"><span data-i18n="high_contrast">High contrast</span></label></div>
+
+    <h2 style="margin-top:16px"><span data-i18n="sub_style">Subtitle style</span></h2>
+    <div class="row">
+      <label class="field grow"><span data-i18n="font_family">Font</span>
+        <select id="stFont">
+          <option value="-apple-system, 'Segoe UI', Arial, sans-serif">System</option>
+          <option value="Arial, Helvetica, sans-serif">Arial</option>
+          <option value="Georgia, 'Times New Roman', serif">Serif</option>
+          <option value="'Courier New', monospace">Monospace</option>
+          <option value="Verdana, Geneva, sans-serif">Verdana</option>
+        </select></label>
+      <label class="field"><span data-i18n="font_size">Font size</span><input id="stSize" type="number" min="10" max="72"></label>
+      <label class="field"><span data-i18n="color">Color</span><input id="stColor" type="color"></label>
+      <label class="field"><span data-i18n="position">Position</span>
+        <select id="stPos"><option value="bottom" data-i18n="pos_bottom">Bottom</option><option value="middle" data-i18n="pos_middle">Middle</option><option value="top" data-i18n="pos_top">Top</option></select></label>
+    </div>
+    <div class="row">
+      <label class="check"><input id="stOutline" type="checkbox"><span data-i18n="outline">Outline</span></label>
+      <label class="check"><input id="stShadow" type="checkbox"><span data-i18n="shadow">Shadow</span></label>
+      <label class="check"><input id="stBg" type="checkbox"><span data-i18n="background">Background</span></label>
+      <label class="field"><span data-i18n="background">Background</span> <input id="stBgOp" type="range" min="0" max="1" step="0.05"></label>
+      <label class="field"><span data-i18n="opacity">Opacity</span> <input id="stOpacity" type="range" min="0.2" max="1" step="0.05"></label>
+    </div>
+
+    <h2 style="margin-top:16px"><span data-i18n="shortcuts">Keyboard shortcuts</span></h2>
+    <p class="hint mono" style="line-height:2">
+      <span class="kbd">Space</span> Play/Pause &nbsp; <span class="kbd">[</span> Start &nbsp; <span class="kbd">]</span> End &nbsp; <span class="kbd">Enter</span> Save &nbsp; <span class="kbd">Del</span> Remove<br>
+      <span class="kbd">←</span>/<span class="kbd">→</span> Frame &nbsp; <span class="kbd">Shift+←/→</span> ±5s &nbsp; <span class="kbd">Ctrl+←/→</span> ±10s &nbsp; <span class="kbd">Alt+←/→</span> ±30s<br>
+      <span class="kbd">Ctrl+Z</span>/<span class="kbd">Y</span> Undo/Redo &nbsp; <span class="kbd">Ctrl+C</span>/<span class="kbd">V</span> Copy/Paste &nbsp; <span class="kbd">Ctrl+D</span> Duplicate &nbsp; <span class="kbd">Ctrl+S</span> Save<br>
+      <span class="kbd">S</span> Split &nbsp; <span class="kbd">M</span> Merge &nbsp; <span class="kbd">L</span> Loop &nbsp; <span class="kbd">F</span> Fullscreen &nbsp; <span class="kbd">Ctrl+F</span> Search &nbsp; <span class="kbd">+/−</span> Zoom
+    </p>
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<!-- ================= Scripts (order matters) ================= -->
+<script src="js/utils/utils.js"></script>
+<script src="js/utils/ffmpeg.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/parser/parsers.js"></script>
+<script src="js/storage/db.js"></script>
+<script src="js/subtitle/model.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/player/player.js"></script>
+<script src="js/timeline/waveform.js"></script>
+<script src="js/timeline/timeline.js"></script>
+<script src="js/subtitle/editor.js"></script>
+<script src="js/components/search.js"></script>
+<script src="js/utils/hanzi.js"></script>
+<script src="js/components/hanzi-tool.js"></script>
+<script src="js/components/sync-tool.js"></script>
+<script src="js/export/export.js"></script>
+<script src="js/asr/asr.js"></script>
+<script src="js/storage/project.js"></script>
+<script src="js/shortcuts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

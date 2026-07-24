@@ -1,0 +1,12 @@
+1
+00:00:01,000 --> 00:00:03,400
+Welcome to Subtitle Studio Pro.
+
+2
+00:00:03,600 --> 00:00:06,500
+Press [ and ] while the video plays
+to capture a new subtitle.
+
+3
+00:00:06,700 --> 00:00:09,000
+Drag blocks on the timeline to retime them.
