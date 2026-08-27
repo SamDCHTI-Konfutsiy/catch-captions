@@ -11,6 +11,8 @@ SSP.asr = (() => {
   const $ = SSP.dom.$;
   const CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2";
   const WINDOW = 30;                       // Whisper's native context, seconds
+  const STRIDE = 25;                       // window step → 5 s overlap between windows
+  const EDGE   = 1.5;                      // trailing seconds treated as unreliable
   const MODELS = {
     tiny:  "onnx-community/whisper-tiny",
     base:  "onnx-community/whisper-base",
@@ -248,27 +250,103 @@ SSP.asr = (() => {
     return false;
   }
 
-  /** Clean the raw cue stream: drop hallucinations, merge duplicate spam,
-      enforce sane durations, keep times monotonic. */
-  function sanitize(cues, duration) {
+  /* ---------------- timing hygiene ----------------
+     Reading-speed aware cleanup. The old version capped a cue's minimum
+     duration at 0.8 s, which is well below what a viewer can actually read.
+     Now each cue gets the time its text needs (CPS-based), stretched into the
+     silence before the next cue — that space is free, so there is no reason
+     to leave it unused. */
+  const MIN_DUR = 1.10;      // absolute floor, seconds
+  const MAX_DUR = 7.00;
+  const MAX_CPS = 17;        // characters per second, spaced scripts
+  const MAX_CPS_CJK = 9;     // ideographic scripts pack more meaning per glyph
+  const MIN_GAP = 0.08;      // smallest gap between consecutive cues
+
+  const isCJK = t => /[\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(t);
+  const charCount = t => t.replace(/\s+/g, "").length;
+
+  /** How long this text needs on screen to be comfortably readable. */
+  function idealDur(text) {
+    const cps = isCJK(text) ? MAX_CPS_CJK : MAX_CPS;
+    return Math.min(MAX_DUR, Math.max(MIN_DUR, charCount(text) / cps));
+  }
+
+  /** Overlapping windows produce the same line twice; keep the better copy. */
+  function dedupe(cues) {
     const out = [];
-    for (const c of cues) {
-      const text = c.text.trim();
-      if (!text || isHallucination(text)) continue;
-      let s = Math.max(0, c.start), e = Math.min(duration, c.end);
+    for (const c of cues.sort((a, b) => a.start - b.start)) {
       const prev = out[out.length - 1];
-      if (prev && prev.text === text && s - prev.end < 1.5) { // stacked duplicate → extend
-        prev.end = Math.max(prev.end, e);
+      if (!prev) { out.push(c); continue; }
+      const near = Math.abs(c.start - prev.start) < 1.2;
+      const a = prev.text.replace(/\s+/g, ""), b = c.text.replace(/\s+/g, "");
+      const same = a === b || (a.length > 6 && b.length > 6 && (a.includes(b) || b.includes(a)));
+      if (near && same) {
+        if (b.length > a.length) prev.text = c.text;   // longer copy is less truncated
+        prev.start = Math.min(prev.start, c.start);
+        prev.end = Math.max(prev.end, c.end);
         continue;
       }
-      if (prev && s < prev.end) s = prev.end + 0.01;          // monotonic
-      if (e < s + 0.3) e = s + Math.min(0.8, 0.05 * text.length + 0.3);
-      if (e > duration) e = duration;
-      if (e <= s) continue;
-      if (text.length / (e - s) > 60) continue;               // impossible reading speed
-      out.push({ start: s, end: e, text });
+      out.push(c);
     }
     return out;
+  }
+
+  /** Whisper often splits one sentence into several stubs; glue them back. */
+  function mergeFragments(cues) {
+    const out = [];
+    for (const c of cues) {
+      const prev = out[out.length - 1];
+      const tiny = charCount(c.text) <= 4 || (c.end - c.start) < 0.45;
+      const close = prev && (c.start - prev.end) < 0.30;
+      const fits = prev && charCount(prev.text + c.text) <= 84;
+      const unfinished = prev && !/[.!?。！？…]["»”』」]?$/.test(prev.text.trim());
+      if (prev && close && fits && (tiny || unfinished) && (c.end - prev.start) <= MAX_DUR) {
+        prev.text = (prev.text.trim() + " " + c.text.trim()).replace(/\s+/g, " ");
+        prev.end = c.end;
+        continue;
+      }
+      out.push(c);
+    }
+    return out;
+  }
+
+  /** Give every cue the time its text needs, using the silence that follows. */
+  function stretchIntoGaps(cues, duration) {
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i], next = cues[i + 1];
+      const limit = next ? next.start - MIN_GAP : duration;
+      const want = c.start + idealDur(c.text);
+      if (c.end < want) c.end = Math.min(want, limit);
+      if (c.end < c.start + 0.25) c.end = Math.min(c.start + 0.25, limit);
+    }
+    return cues;
+  }
+
+  function sanitize(cues, duration) {
+    let list = [];
+    for (const c of cues) {
+      const text = (c.text || "").trim();
+      if (!text || isHallucination(text)) continue;
+      let s = Math.max(0, c.start), e = Math.min(duration, c.end);
+      if (e <= s) e = s + 0.3;
+      list.push({ start: s, end: e, text });
+    }
+    list = dedupe(list);
+    list = mergeFragments(list);
+
+    for (let i = 1; i < list.length; i++) {                 // keep times monotonic
+      if (list[i].start < list[i - 1].end + MIN_GAP)
+        list[i].start = Math.min(list[i].end - 0.2, list[i - 1].end + MIN_GAP);
+      if (list[i].start < 0) list[i].start = 0;
+    }
+    list = list.filter(c => c.end > c.start);
+    list = stretchIntoGaps(list, duration);
+
+    return list.filter(c => {
+      if (c.end > duration) c.end = duration;
+      if (c.end - c.start > MAX_DUR) c.end = c.start + MAX_DUR;
+      return c.end > c.start + 0.15;
+    });
   }
 
   /* ---------------- transcription ---------------- */
@@ -295,21 +373,30 @@ SSP.asr = (() => {
       const genOpts = { task: "transcribe", return_timestamps: true };
       if (lang) genOpts.language = lang;
 
-      for (let t0 = 0; t0 < duration; t0 += WINDOW) {
+      for (let t0 = 0; t0 < duration; t0 += STRIDE) {
         if (cancelled) break;
         const t1 = Math.min(duration, t0 + WINDOW);
         if (t1 - t0 < 0.4) break;
+        const isLast = t1 >= duration - 0.01;
         setStatus(`${SSP.i18n.t("asr_transcribing")} — ${SSP.time.fmtShort(t0)} / ${SSP.time.fmtShort(duration)}`);
         const slice = audio.getWindow(t0, t1);
         if (rms(slice) < 0.004) { setBar(0.30 + 0.70 * (t1 / duration)); continue; }  // silence → skip
         const out = await asr(slice, genOpts);
 
+        /* Windows overlap by WINDOW-STRIDE seconds, so a word cut at one
+           window's edge is heard whole in the next one. Cues that start in the
+           unreliable tail are dropped here — the following window covers them
+           with better context. The final window keeps everything. */
+        const tailCut = isLast ? Infinity : (t1 - t0) - EDGE;
+
         for (const c of (out.chunks || [])) {
           const text = (c.text || "").trim();
           if (!text) continue;
           let [s, e] = c.timestamp || [0, null];
-          s = (s ?? 0) + t0;
-          e = (e ?? (t1 - t0)) + t0;
+          s = s ?? 0;
+          e = e ?? (t1 - t0);
+          if (s >= tailCut) continue;                 // belongs to the next window
+          s += t0; e += t0;
           if (e <= s) e = s + 0.5;
           cues.push({ start: Math.min(s, duration), end: Math.min(e, duration), text });
         }
