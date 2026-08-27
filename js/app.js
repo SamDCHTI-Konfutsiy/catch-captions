@@ -189,12 +189,12 @@
     SSP.asr.init();
     SSP.shortcuts.init();
     SSP.project.init();
+    SSP.autoSync.init();
     initDnD();
     initUrlModal();
     initSplitters();
     initStatus();
     initPWA();
-
     $("#btnOpenVideo").addEventListener("click", browseVideo);
     $("#btnOpenVideo2").addEventListener("click", browseVideo);
     $("#btnOpenSubs").addEventListener("click", browseSubs);
