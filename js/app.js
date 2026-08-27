@@ -190,6 +190,8 @@
     SSP.shortcuts.init();
     SSP.project.init();
     SSP.autoSync.init();
+   /* SSP.app.init()*/    
+    SSP.urlFix.init();
     initDnD();
     initUrlModal();
     initSplitters();
